@@ -16,21 +16,17 @@ class ContextClassifier:
 
     @property
     def training_sample_count(self):
-        sample_count = 0
-
-        for root, dirs, files in os.walk("datasets/current/training"):
-            sample_count += len(files)
-
-        return sample_count
+        return sum(
+            len(files)
+            for root, dirs, files in os.walk("datasets/current/training")
+        )
 
     @property
     def validation_sample_count(self):
-        sample_count = 0
-
-        for root, dirs, files in os.walk("datasets/current/validation"):
-            sample_count += len(files)
-
-        return sample_count
+        return sum(
+            len(files)
+            for root, dirs, files in os.walk("datasets/current/validation")
+        )
 
     @staticmethod
     def create_training_and_validation_sets(validation_set_probability=0.1, seed=None):
@@ -70,14 +66,18 @@ class ContextClassifier:
 
     @classmethod
     def executable_train(cls, epochs=3, autosave=False, classifier="CNNXceptionContextClassifier", validate=True):
-        context_paths = list()
+        context_paths = []
 
         for root, directories, files in os.walk("datasets/collect_frames_for_context".replace("/", os.sep)):
             if root != "datasets/collect_frames_for_context".replace("/", os.sep):
                 break
 
-            for directory in directories:
-                context_paths.append(f"datasets/collect_frames_for_context/{directory}".replace("/", os.sep))
+            context_paths.extend(
+                f"datasets/collect_frames_for_context/{directory}".replace(
+                    "/", os.sep
+                )
+                for directory in directories
+            )
 
         if not len(context_paths):
             raise ContextClassifierError("No Context Frames found in 'datasets/collect_frames_for_datasets'...")

@@ -3,8 +3,8 @@ import yaml.scanner
 
 import offshoot
 
-config = dict()
-plugin_config = dict()
+config = {}
+plugin_config = {}
 
 try:
     with open("config/config.yml", "r") as f:

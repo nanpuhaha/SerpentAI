@@ -39,7 +39,7 @@ def cefpython_initialize(cef_browser_cls):
     try:
         md = cefpython.GetModuleDirectory()
     except Exception as e:
-        raise Exception("CEFLoader: Could not define module-directory: %s" % e)
+        raise Exception(f"CEFLoader: Could not define module-directory: {e}")
     Logger.debug("CEFLoader: Module Directory: %s", md)
 
     sd = tempfile.gettempdir()
@@ -50,6 +50,7 @@ def cefpython_initialize(cef_browser_cls):
             cefpython.MessageLoopWork()
         except Exception as e:
             print("EXCEPTION IN CEF LOOP", e)
+
     cefpython_loop_event = Clock.schedule_interval(cef_loop, 0.01)
 
     default_settings = {
@@ -105,15 +106,14 @@ def cefpython_initialize(cef_browser_cls):
             cefpython.Initialize(
                 default_settings, cef_browser_cls._command_line_switches)
         except Exception as err:
-            raise Exception(
-                "CEFLoader: Failed to initialize cefpython %s" % (err, ))
+            raise Exception(f"CEFLoader: Failed to initialize cefpython {err}")
 
     try:
         cookie_manager = cefpython.CookieManager.GetGlobalManager()
         cookie_manager.SetStoragePath(cookies_path, True)
         cef_browser_cls._cookie_manager = cookie_manager
     except Exception as e:
-        Logger.warning("CEFLoader: Failed to set up cookie manager: %s" % e)
+        Logger.warning(f"CEFLoader: Failed to set up cookie manager: {e}")
 
     def cefpython_shutdown(*largs):
         print("CEFPYTHON SHUTDOWN", largs, App.get_running_app())

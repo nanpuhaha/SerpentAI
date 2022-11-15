@@ -17,7 +17,7 @@ class Environment:
         self.game_api = game_api
         self.input_controller = input_controller
 
-        self.game_state = dict()
+        self.game_state = {}
 
         self.analytics_client = AnalyticsClient(project_key=config["analytics"]["topic"])
 
@@ -36,11 +36,11 @@ class Environment:
 
     @property
     def new_episode_data(self):
-        return dict()
+        return {}
 
     @property
     def end_episode_data(self):
-        return dict()
+        return {}
 
     def new_episode(self, maximum_steps=None, reset=False):
         self.episode_steps = 0
@@ -109,10 +109,12 @@ class Environment:
                     continue
 
                 for game_input_item in game_input:
-                    if isinstance(game_input_item, KeyboardEvent):
-                        if game_input_item.event == KeyboardEvents.DOWN:
-                            discrete_keyboard_keys.add(game_input_item.keyboard_key)
-                            discrete_keyboard_labels.add(label)
+                    if (
+                        isinstance(game_input_item, KeyboardEvent)
+                        and game_input_item.event == KeyboardEvents.DOWN
+                    ):
+                        discrete_keyboard_keys.add(game_input_item.keyboard_key)
+                        discrete_keyboard_labels.add(label)
 
         discrete_keyboard_keys_sent = False
 
@@ -120,7 +122,13 @@ class Environment:
             # Discrete
             if value is None:
                 # Discrete - Keyboard
-                if (len(discrete_keyboard_keys) == 0 and len(discrete_keyboard_labels) > 0) or isinstance(game_input[0] if len(game_input) else None, KeyboardEvent):
+                if (
+                    not discrete_keyboard_keys
+                    and discrete_keyboard_labels
+                    or isinstance(
+                        game_input[0] if len(game_input) else None, KeyboardEvent
+                    )
+                ):
                     if not discrete_keyboard_keys_sent:
                         self.input_controller.handle_keys(list(discrete_keyboard_keys))
 
@@ -137,7 +145,6 @@ class Environment:
                         )
 
                         discrete_keyboard_keys_sent = True
-                # Discrete - Mouse
                 elif isinstance(game_input[0], MouseEvent):
                     for event in game_input:
                         if event.event == MouseEvents.CLICK:
@@ -165,48 +172,46 @@ class Environment:
                                 }
                             }
                         )
-            # Continuous
-            else:
-                if isinstance(game_input[0], KeyboardEvent):
-                    self.input_controller.tap_keys(
-                        [event.keyboard_key for event in game_input],
-                        duration=value
-                    )
+            elif isinstance(game_input[0], KeyboardEvent):
+                self.input_controller.tap_keys(
+                    [event.keyboard_key for event in game_input],
+                    duration=value
+                )
 
-                    self.analytics_client.track(
-                        event_key="GAME_INPUT",
-                        data={
-                            "keyboard": {
-                                "type": "CONTINUOUS",
-                                "label": label,
-                                "inputs": sorted([event.keyboard_key.value for event in game_input]),
-                                "duration": value
-                            },
-                            "mouse": {}
-                        }
-                    )
-                elif isinstance(game_input[0], MouseEvent):
-                    # TODO: Tag Analytics
-                    for event in game_input:
-                        if event.event == MouseEvents.CLICK_SCREEN_REGION:
-                            screen_region = event.kwargs["screen_region"]
-                            self.input_controller.click_screen_region(button=event.button, screen_region=screen_region)
-                        elif event.event == MouseEvents.MOVE:
-                            self.input_controller.move(x=event.x, y=event.y)
-                        elif event.event == MouseEvents.MOVE_RELATIVE:
-                            self.input_controller.move(x=event.x, y=event.y, absolute=False)
-                        elif event.event == MouseEvents.DRAG_START:
-                            screen_region = event.kwargs.get("screen_region")
-                            coordinates = self.input_controller.ratios_to_coordinates(value, screen_region=screen_region)
+                self.analytics_client.track(
+                    event_key="GAME_INPUT",
+                    data={
+                        "keyboard": {
+                            "type": "CONTINUOUS",
+                            "label": label,
+                            "inputs": sorted([event.keyboard_key.value for event in game_input]),
+                            "duration": value
+                        },
+                        "mouse": {}
+                    }
+                )
+            elif isinstance(game_input[0], MouseEvent):
+                # TODO: Tag Analytics
+                for event in game_input:
+                    if event.event == MouseEvents.CLICK_SCREEN_REGION:
+                        screen_region = event.kwargs["screen_region"]
+                        self.input_controller.click_screen_region(button=event.button, screen_region=screen_region)
+                    elif event.event == MouseEvents.MOVE:
+                        self.input_controller.move(x=event.x, y=event.y)
+                    elif event.event == MouseEvents.MOVE_RELATIVE:
+                        self.input_controller.move(x=event.x, y=event.y, absolute=False)
+                    elif event.event == MouseEvents.DRAG_START:
+                        screen_region = event.kwargs.get("screen_region")
+                        coordinates = self.input_controller.ratios_to_coordinates(value, screen_region=screen_region)
 
-                            self.input_controller.move(x=coordinates[0], y=coordinates[1], duration=0.1)
-                            self.input_controller.click_down(button=event.button)
-                        elif event.event == MouseEvents.DRAG_END:
-                            screen_region = event.kwargs.get("screen_region")
-                            coordinates = self.input_controller.ratios_to_coordinates(value, screen_region=screen_region)
+                        self.input_controller.move(x=coordinates[0], y=coordinates[1], duration=0.1)
+                        self.input_controller.click_down(button=event.button)
+                    elif event.event == MouseEvents.DRAG_END:
+                        screen_region = event.kwargs.get("screen_region")
+                        coordinates = self.input_controller.ratios_to_coordinates(value, screen_region=screen_region)
 
-                            self.input_controller.move(x=coordinates[0], y=coordinates[1], duration=0.1)
-                            self.input_controller.click_up(button=event.button)
+                        self.input_controller.move(x=coordinates[0], y=coordinates[1], duration=0.1)
+                        self.input_controller.click_up(button=event.button)
 
     def clear_input(self):
         self.input_controller.handle_keys([])

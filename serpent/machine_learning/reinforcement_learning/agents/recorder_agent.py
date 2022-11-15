@@ -52,8 +52,8 @@ class RecorderAgent(Agent):
 
         self.window_geometry = window_geometry
 
-        self.game_frame_buffers = list()
-        self.rewards = list()
+        self.game_frame_buffers = []
+        self.rewards = []
 
         self.current_step = 0
 
@@ -76,17 +76,17 @@ class RecorderAgent(Agent):
         self.game_frame_buffers.append(state)
         self.current_state = state
 
-        actions = list()
+        actions = []
 
         for game_inputs_item in self.game_inputs:
             if game_inputs_item["control_type"] == InputControlTypes.DISCRETE:
                 label = random.choice(list(game_inputs_item["inputs"].keys()))
-                action = list()
+                action = []
 
                 actions.append((label, action, None))
             elif game_inputs_item["control_type"] == InputControlTypes.CONTINUOUS:
                 label = game_inputs_item["name"]
-                action = list()
+                action = []
 
                 size = 1
 
@@ -99,15 +99,14 @@ class RecorderAgent(Agent):
                         game_inputs_item["inputs"]["maximum"]
                     )
                 else:
-                    input_value = list()
-
-                    for i in range(size):
-                        input_value.append(
-                            random.uniform(
-                                game_inputs_item["inputs"]["minimum"],
-                                game_inputs_item["inputs"]["maximum"]
-                            )
+                    input_value = [
+                        random.uniform(
+                            game_inputs_item["inputs"]["minimum"],
+                            game_inputs_item["inputs"]["maximum"],
                         )
+                        for _ in range(size)
+                    ]
+
 
                 actions.append((label, action, input_value))
 
@@ -125,11 +124,14 @@ class RecorderAgent(Agent):
         if terminal:
             InputRecorder.pause_input_recording()
 
-            input_events = list()
             input_event_count = self.redis_client.llen(config["input_recorder"]["redis_key"])
 
-            for i in range(input_event_count):
-                input_events.append(pickle.loads(self.redis_client.lpop(config["input_recorder"]["redis_key"])))
+            input_events = [
+                pickle.loads(
+                    self.redis_client.lpop(config["input_recorder"]["redis_key"])
+                )
+                for _ in range(input_event_count)
+            ]
 
             data = self._merge_frames_and_input_events(input_events)
 
@@ -137,9 +139,9 @@ class RecorderAgent(Agent):
             rewards_index = 0
 
             active_keys = set()
-            down_keys = dict()
+            down_keys = {}
 
-            observations = dict()
+            observations = {}
 
             for item in data:
                 if isinstance(item, GameFrameBuffer):
@@ -149,7 +151,7 @@ class RecorderAgent(Agent):
                     rewards_index += 1
 
                     timestamp = item.frames[-2].timestamp
-                    observations[timestamp] = [item, dict(), list(active_keys), list(), reward, terminal]
+                    observations[timestamp] = [item, {}, list(active_keys), [], reward, terminal]
                 elif item["type"] == "keyboard":
                     key_name, key_event = item["name"].split("-")
 
@@ -199,7 +201,7 @@ class RecorderAgent(Agent):
                         data=[key_name.encode("utf-8") for key_name in keyboard_inputs_active]
                     )
 
-                    filtered_mouse_inputs = list()
+                    filtered_mouse_inputs = []
                     mouse_move_index = None
 
                     valid_game_window_x = range(
@@ -219,7 +221,7 @@ class RecorderAgent(Agent):
 
                             filtered_mouse_inputs.append(mouse_input)
 
-                    mouse_input_data = list()
+                    mouse_input_data = []
 
                     for i, mouse_input in enumerate(filtered_mouse_inputs):
                         if mouse_input["name"] == "MOVE" and i != mouse_move_index:
@@ -252,8 +254,8 @@ class RecorderAgent(Agent):
 
                     i += 1
 
-                self.game_frame_buffers = list()
-                self.rewards = list()
+                self.game_frame_buffers = []
+                self.rewards = []
         else:
             InputRecorder.resume_input_recording()
 
@@ -265,7 +267,7 @@ class RecorderAgent(Agent):
         game_frame_buffer_index = 0
         input_event_index = 0
 
-        merged = list()
+        merged = []
 
         while True:
             game_frame_buffer = None
@@ -273,12 +275,11 @@ class RecorderAgent(Agent):
 
             if game_frame_buffer_index > (len(self.game_frame_buffers) - 1) and input_event_index > (len(input_events) - 1):
                 break
-            else:
-                if game_frame_buffer_index <= (len(self.game_frame_buffers) - 1):
-                    game_frame_buffer = self.game_frame_buffers[game_frame_buffer_index]
+            if game_frame_buffer_index <= (len(self.game_frame_buffers) - 1):
+                game_frame_buffer = self.game_frame_buffers[game_frame_buffer_index]
 
-                if input_event_index <= (len(input_events) - 1):
-                    input_event = input_events[input_event_index]
+            if input_event_index <= (len(input_events) - 1):
+                input_event = input_events[input_event_index]
 
             if game_frame_buffer is None:
                 item = input_event
@@ -300,18 +301,19 @@ class RecorderAgent(Agent):
             if isinstance(item, GameFrameBuffer):
                 merged.append(item)
                 has_game_frame_buffer = True
-            else:
-                if has_game_frame_buffer:
-                    merged.append(item)
+            elif has_game_frame_buffer:
+                merged.append(item)
 
         self.rewards = self.rewards[1:]
 
         return merged[1:]
 
     def _handle_signal(self, signum=15, frame=None, do_exit=True):
-        if self.input_recorder_process is not None:
-            if self.input_recorder_process.poll() is None:
-                self.input_recorder_process.send_signal(signum)
+        if (
+            self.input_recorder_process is not None
+            and self.input_recorder_process.poll() is None
+        ):
+            self.input_recorder_process.send_signal(signum)
 
-                if do_exit:
-                    exit()
+            if do_exit:
+                exit()

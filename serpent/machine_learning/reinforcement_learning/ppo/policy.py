@@ -22,11 +22,7 @@ class Policy(torch.nn.Module):
         value, actor_features, states = self.base(inputs, states, masks)
         distribution = self.distribution(actor_features)
 
-        if deterministic:
-            action = distribution.mode()
-        else:
-            action = distribution.sample()
-
+        action = distribution.mode() if deterministic else distribution.sample()
         action_log_probs = distribution.log_probs(action)
 
         return value, action, action_log_probs, states

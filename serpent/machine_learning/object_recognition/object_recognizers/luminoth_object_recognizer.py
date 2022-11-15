@@ -62,14 +62,11 @@ class LuminothObjectRecognizer(ObjectRecognizer):
         return objects, after - before
 
     def predict_directory(self, path, **kwargs):
-        image_file_names = list()
+        image_file_names = []
 
         for root, directories, files in os.walk(path):
             if root == path:
-                for file in files:
-                    if file.endswith(".png"):
-                        image_file_names.append(file)
-
+                image_file_names.extend(file for file in files if file.endswith(".png"))
         if not os.path.exists("datasets/predicted"):
             os.mkdir("datasets/predicted")
 
@@ -227,7 +224,7 @@ class LabelImgReader(ObjectDetectionReader):
 
                 continue
 
-            gt_boxes = list()
+            gt_boxes = []
 
             for obj in annotation["object"]:
                 try:
@@ -243,7 +240,7 @@ class LabelImgReader(ObjectDetectionReader):
                     "ymax": obj["bndbox"]["ymax"],
                 })
 
-            if len(gt_boxes) == 0:
+            if not gt_boxes:
                 continue
 
             self.yielded_records += 1

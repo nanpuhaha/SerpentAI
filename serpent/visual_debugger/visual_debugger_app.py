@@ -59,7 +59,7 @@ class VisualDebuggerCanvas(Widget):
     def __init__(self, buckets=None):
         super().__init__()
 
-        self.images = dict()
+        self.images = {}
 
         self.root = FloatLayout(size=(Window.width, Window.height))
         self.grid = GridLayout(cols=8)
@@ -67,7 +67,7 @@ class VisualDebuggerCanvas(Widget):
         self.add_widget(self.root)
         self.root.add_widget(self.grid)
 
-        for i, bucket in enumerate(buckets):
+        for bucket in buckets:
             layout = BoxLayout(orientation="vertical")
 
             image = VisualDebuggerImage(

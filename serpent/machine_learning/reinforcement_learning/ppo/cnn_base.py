@@ -55,10 +55,7 @@ class CNNBase(torch.nn.Module):
 
     @property
     def state_size(self):
-        if hasattr(self, "gru"):
-            return 512
-        else:
-            return 1
+        return 512 if hasattr(self, "gru") else 1
 
     @property
     def output_size(self):

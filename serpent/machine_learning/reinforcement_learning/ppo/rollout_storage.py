@@ -68,7 +68,7 @@ class RolloutStorage:
 
 
     def feed_forward_generator(self, advantages, num_mini_batch):
-        num_steps, num_processes = self.rewards.size()[0:2]
+        num_steps, num_processes = self.rewards.size()[:2]
         batch_size = num_processes * num_steps
 
         assert batch_size >= num_mini_batch, (

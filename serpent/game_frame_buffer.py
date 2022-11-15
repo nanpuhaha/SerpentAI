@@ -11,7 +11,7 @@ class GameFrameBuffer:
 
     def __init__(self, size=5):
         self.size = size
-        self.frames = list()
+        self.frames = []
 
     @property
     def full(self):

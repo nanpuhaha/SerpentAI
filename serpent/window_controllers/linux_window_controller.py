@@ -35,16 +35,27 @@ class LinuxWindowController(WindowController):
         return subprocess.check_output(shlex.split(f"xdotool getwindowname {focused_window_id}")).decode("utf-8").strip()
 
     def get_window_geometry(self, window_id):
-        geometry = dict()
-
         window_geometry = subprocess.check_output(shlex.split(f"xdotool getwindowgeometry {window_id}")).decode("utf-8").strip()
-        size = re.match(r"\s+Geometry: ([0-9]+x[0-9]+)", window_geometry.split("\n")[2]).group(1).split("x")
+        size = re.match(
+            r"\s+Geometry: ([0-9]+x[0-9]+)", window_geometry.split("\n")[2]
+        )[1].split("x")
 
-        geometry["width"] = int(size[0])
-        geometry["height"] = int(size[1])
 
+        geometry = {"width": int(size[0]), "height": int(size[1])}
         window_information = subprocess.check_output(shlex.split(f"xwininfo -id {window_id}")).decode("utf-8").strip()
-        geometry["x_offset"] = int(re.match(r"\s+Absolute upper-left X:\s+([0-9]+)", window_information.split("\n")[2]).group(1))
-        geometry["y_offset"] = int(re.match(r"\s+Absolute upper-left Y:\s+([0-9]+)", window_information.split("\n")[3]).group(1))
+        geometry["x_offset"] = int(
+            re.match(
+                r"\s+Absolute upper-left X:\s+([0-9]+)",
+                window_information.split("\n")[2],
+            )[1]
+        )
+
+        geometry["y_offset"] = int(
+            re.match(
+                r"\s+Absolute upper-left Y:\s+([0-9]+)",
+                window_information.split("\n")[3],
+            )[1]
+        )
+
 
         return geometry

@@ -27,16 +27,12 @@ class SerpentGame(Game, metaclass=Singleton):
         self.api_class = MyGameAPI
         self.api_instance = None
 
-        self.environments = dict()
-        self.environment_data = dict()
+        self.environments = {}
+        self.environment_data = {}
 
     @property
     def screen_regions(self):
-        regions = {
-            "SAMPLE_REGION": (0, 0, 0, 0)
-        }
-
-        return regions
+        return {"SAMPLE_REGION": (0, 0, 0, 0)}
 
     def after_launch(self):
         self.is_launched = True

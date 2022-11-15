@@ -36,14 +36,14 @@ class CEFKeyboardManagerSingleton:
         """ Kivy ~ > 1.9.2 with SDL2 window, uses on_textinput instead of
         on_key_down
         """
-        modifiers = list()
+        modifiers = []
         keycode = (ord(text), text)
         self.process_key_down(browser, None, keycode, text, modifiers)
 
     def kivy_on_key_down(self, browser, keyboard, keycode, text, modifiers):
         whitelist = (9, 8, 13, 27)
         if Window.__class__.__module__ == 'kivy.core.window.window_sdl2' and \
-                (keycode[0] not in whitelist):
+                    (keycode[0] not in whitelist):
             return
         self.process_key_down(browser, keyboard, keycode, text, modifiers)
 

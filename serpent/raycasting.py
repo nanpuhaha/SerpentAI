@@ -28,7 +28,7 @@ def generate_rays(player_to_center_angle, mode="UNIFORM", quantity=12, starting_
 
 
 def calculate_minimum_collision_distances(rays, thresholded_frame, angle_mapping_array, distance_mapping_array):
-    ray_collision_distances = dict()
+    ray_collision_distances = {}
 
     for label, angle in rays.items():
         ray_collision_mask = (

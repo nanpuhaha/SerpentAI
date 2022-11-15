@@ -39,7 +39,7 @@ class RandomAgent(Agent):
         )
 
     def generate_actions(self, state, **kwargs):
-        actions = list()
+        actions = []
 
         for game_inputs_item in self.game_inputs:
             if game_inputs_item["control_type"] == InputControlTypes.DISCRETE:
@@ -62,15 +62,14 @@ class RandomAgent(Agent):
                         game_inputs_item["inputs"]["maximum"]
                     )
                 else:
-                    input_value = list()
-
-                    for i in range(size):
-                        input_value.append(
-                            random.uniform(
-                                game_inputs_item["inputs"]["minimum"],
-                                game_inputs_item["inputs"]["maximum"]
-                            )
+                    input_value = [
+                        random.uniform(
+                            game_inputs_item["inputs"]["minimum"],
+                            game_inputs_item["inputs"]["maximum"],
                         )
+                        for _ in range(size)
+                    ]
+
 
                 actions.append((label, action, input_value))
 

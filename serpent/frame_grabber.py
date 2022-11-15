@@ -104,17 +104,14 @@ class FrameGrabber:
 
     @classmethod
     def get_frames(cls, frame_buffer_indices, frame_type="FULL", **kwargs):
-        while True:
-            if redis_client.llen(config["frame_grabber"]["redis_key"]) > 149:
-                break
-            
+        while redis_client.llen(config["frame_grabber"]["redis_key"]) <= 149:
             time.sleep(0.1)
 
         game_frame_buffer = GameFrameBuffer(size=len(frame_buffer_indices))
 
         for i in frame_buffer_indices:
             redis_key = config["frame_grabber"]["redis_key"]
-            redis_key = redis_key + "_PIPELINE" if frame_type == "PIPELINE" else redis_key
+            redis_key = f"{redis_key}_PIPELINE" if frame_type == "PIPELINE" else redis_key
 
             frame_data = redis_client.lindex(redis_key, i)
 
@@ -134,10 +131,7 @@ class FrameGrabber:
 
     @classmethod
     def get_frames_with_pipeline(cls, frame_buffer_indices, **kwargs):
-        while True:
-            if redis_client.llen(config["frame_grabber"]["redis_key"]) > 149:
-                break
-
+        while redis_client.llen(config["frame_grabber"]["redis_key"]) <= 149:
             time.sleep(0.1)
 
         game_frame_buffers = [

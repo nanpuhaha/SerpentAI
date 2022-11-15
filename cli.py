@@ -114,7 +114,7 @@ def download(module):
 
     if module == "tesseract":
         if is_windows():
-            print(f"Downloading module 'tesseract' to tools directory...")
+            print("Downloading module 'tesseract' to tools directory...")
             _download_module(
                 "https://github.com/SerpentAI/SerpentAI/releases/download/optional/tesseract_4.00.00a_win_amd64.zip",
                 pathlib.Path("tools/tesseract.zip"),
