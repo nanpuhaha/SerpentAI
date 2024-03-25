@@ -99,7 +99,7 @@ class PPOAgent(Agent):
                     agent_kwargs[key] = value
 
         self.discount = agent_kwargs["discount"]
-        
+
         self.gae = agent_kwargs["gae"]
         self.gae_tau = agent_kwargs["gae_tau"]
 
@@ -137,7 +137,7 @@ class PPOAgent(Agent):
         self.current_step = 0
 
         self.mode = PPOAgentModes.TRAIN
-        
+
         self.save_steps = agent_kwargs["save_steps"]
 
         self.model_path = agent_kwargs["model"]
@@ -148,10 +148,11 @@ class PPOAgent(Agent):
         self.logger.log_hyperparams(agent_kwargs)
 
     def generate_actions(self, state, **kwargs):
-        frames = list()
+        frames = [
+            torch.tensor(torch.from_numpy(game_frame.frame), dtype=torch.float32)
+            for game_frame in state.frames
+        ]
 
-        for game_frame in state.frames:
-            frames.append(torch.tensor(torch.from_numpy(game_frame.frame), dtype=torch.float32))
 
         self.current_state = torch.stack(frames, 0)
         self.current_state = self.current_state[None, :]
@@ -163,13 +164,10 @@ class PPOAgent(Agent):
                 self.storage.masks[self.storage.step]
             )
 
-        actions = list()
-
         label = self.game_inputs_mappings[0][int(self.current_action[0])]
         action = self.game_inputs[0]["inputs"][label]
 
-        actions.append((label, action, None))
-
+        actions = [(label, action, None)]
         for action in actions:
             self.analytics_client.track(
                 event_key="AGENT_ACTION",

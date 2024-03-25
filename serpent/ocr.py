@@ -56,18 +56,17 @@ def locate_string(query_string, image, fuzziness=0, ocr_preset=None, offset_x=0,
         closing_size=ocr_preset["extract"]["closing_size"]
     )
 
-    detected_strings = list()
-
-    for image in images:
-        detected_strings.append(
-            perform_ocr(
-                image,
-                scale=ocr_preset["perform"]["scale"],
-                order=ocr_preset["perform"]["order"],
-                horizontal_closing=ocr_preset["perform"]["horizontal_closing"],
-                vertical_closing=ocr_preset["perform"]["vertical_closing"]
-            )
+    detected_strings = [
+        perform_ocr(
+            image,
+            scale=ocr_preset["perform"]["scale"],
+            order=ocr_preset["perform"]["order"],
+            horizontal_closing=ocr_preset["perform"]["horizontal_closing"],
+            vertical_closing=ocr_preset["perform"]["vertical_closing"],
         )
+        for image in images
+    ]
+
 
     if query_string in detected_strings:
         text_region = list(text_regions[detected_strings.index(query_string)])
@@ -105,7 +104,7 @@ def extract_ocr_candidates(image, gradient_size=3, closing_size=10, minimum_area
 
     regions = skimage.measure.regionprops(label_image)
 
-    text_regions = list()
+    text_regions = []
 
     for region in regions:
         if region.area > minimum_area:
@@ -120,10 +119,13 @@ def extract_ocr_candidates(image, gradient_size=3, closing_size=10, minimum_area
             if aspect_ratio >= minimum_aspect_ratio and white_pixel_count > black_pixel_count and y1 - y0 >= 8:
                 text_regions.append(region.bbox)
 
-    ocr_candidates = list()
+    ocr_candidates = [
+        gray_image[
+            text_region[0] : text_region[2], text_region[1] : text_region[3]
+        ]
+        for text_region in text_regions
+    ]
 
-    for text_region in text_regions:
-        ocr_candidates.append(gray_image[text_region[0]:text_region[2], text_region[1]:text_region[3]])
 
     return ocr_candidates, text_regions
 

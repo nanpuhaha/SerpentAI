@@ -8,7 +8,7 @@ class Loggers(enum.Enum):
 
 class Logger:
     def __init__(self, logger_kwargs=None):
-        self.config = logger_kwargs or dict()
+        self.config = logger_kwargs or {}
 
     def log_hyperparams(self, hyperparams, step=0):
         raise NotImplementedError()

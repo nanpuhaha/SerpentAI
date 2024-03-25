@@ -56,7 +56,7 @@ class PPO:
 
                 surr1 = ratio * adv_targ
                 surr2 = torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param) * adv_targ
-                
+
                 action_loss = -torch.min(surr1, surr2).mean()
                 value_loss = torch.nn.functional.mse_loss(return_batch, values)
 

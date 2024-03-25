@@ -71,12 +71,13 @@ class InputRecorder:
                 "type": "mouse",
                 "name": event.event.name,
                 "button": event.button.name if event.button else None,
-                "direction": event.direction if event.direction else None,
-                "velocity": event.velocity if event.velocity else None,
+                "direction": event.direction or None,
+                "velocity": event.velocity or None,
                 "x": event.x,
                 "y": event.y,
-                "timestamp": event.timestamp
+                "timestamp": event.timestamp,
             }
+
 
             event = pickle.dumps(event)
             redis_client.rpush(config["input_recorder"]["redis_key"], event)

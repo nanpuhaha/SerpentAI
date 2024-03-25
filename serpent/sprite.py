@@ -14,7 +14,7 @@ class Sprite:
         if not isinstance(image_data, np.ndarray):
             raise SpriteError("'image_data' needs to be a 4D instance of ndarray...")
 
-        if not len(image_data.shape) == 4:
+        if len(image_data.shape) != 4:
             raise SpriteError("'image_data' ndarray needs to be 4D...")
 
         self.name = name
@@ -26,10 +26,11 @@ class Sprite:
         self.constellation_of_pixels = constellation_of_pixels or self._generate_constellation_of_pixels()
 
     def append_image_data(self, image_data, signature_colors=None, constellation_of_pixels=None):
-        images = list()
+        images = [
+            (self.image_data[:, :, :, i])[:, :, :, np.newaxis]
+            for i in range(self.image_data.shape[3])
+        ]
 
-        for i in range(self.image_data.shape[3]):
-            images.append((self.image_data[:, :, :, i])[:, :, :, np.newaxis])
 
         images.append(image_data)
 
@@ -46,9 +47,9 @@ class Sprite:
             self.constellation_of_pixels = self._generate_constellation_of_pixels()
 
     def generate_constellation_of_pixels_images(self):
-        constellation_of_pixel_images = list()
+        constellation_of_pixel_images = []
 
-        for i in range(self.image_data.shape[3]):
+        for _ in range(self.image_data.shape[3]):
             constellation_of_pixel_image = np.zeros(self.image_data[..., :3, 0].shape, dtype="uint8")
 
             for yx, rgb in self.constellation_of_pixels[0].items():
@@ -62,7 +63,7 @@ class Sprite:
         return str(uuid.uuid4())
 
     def _generate_signature_colors(self, quantity=8):
-        signature_colors = list()
+        signature_colors = []
         height, width, pixels, animation_states = self.image_data.shape
 
         for i in range(animation_states):
@@ -71,7 +72,7 @@ class Sprite:
             if len(values[0]) == 3:
                 maximum_indices = np.argsort(counts)[::-1][:quantity]
             elif len(values[0]) == 4:
-                maximum_indices = list()
+                maximum_indices = []
 
                 for index in np.argsort(counts)[::-1]:
                     value = values[index]
@@ -88,13 +89,13 @@ class Sprite:
         return signature_colors
 
     def _generate_constellation_of_pixels(self, quantity=8):
-        constellation_of_pixels = list()
+        constellation_of_pixels = []
         height, width, pixels, animation_states = self.image_data.shape
 
         for i in range(animation_states):
-            constellation_of_pixels.append(dict())
+            constellation_of_pixels.append({})
 
-            for ii in range(quantity):
+            for _ in range(quantity):
                 signature_color = random.choice(list(self.signature_colors[i]))
                 signature_color_locations = Sprite.locate_color(signature_color, np.squeeze(self.image_data[:, :, :3, i]))
 
@@ -112,4 +113,4 @@ class Sprite:
         elif image.shape[2] == 4:
             color_indices = np.where(np.all(image[:, :, :3] == (list(color) + [255]), axis=-1))
 
-        return list(zip(*color_indices)) if len(color_indices[0]) else list()
+        return list(zip(*color_indices)) if len(color_indices[0]) else []

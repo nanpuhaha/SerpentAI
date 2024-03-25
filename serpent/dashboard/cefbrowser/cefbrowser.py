@@ -339,8 +339,7 @@ class CEFBrowser(Widget, FocusBehavior):
         """ Deletes the cookie with the given url. If url is empty all cookies
         get deleted.
         """
-        cookie_manager = cefpython.CookieManager.GetGlobalManager()
-        if cookie_manager:
+        if cookie_manager := cefpython.CookieManager.GetGlobalManager():
             cookie_manager.DeleteCookies(url, "")
         else:
             Logger.warning("No cookie manager found!, Can't delete cookie(s)")
@@ -391,7 +390,6 @@ class CEFBrowser(Widget, FocusBehavior):
             error_text,
             failed_url,
         )
-        pass
 
     def _keyboard_update(self, shown, rect, attributes):
         """
@@ -440,17 +438,16 @@ class CEFBrowser(Widget, FocusBehavior):
         rect,
         attributes,
     ):  # TODO: place right, left, etc. see cefkivy
-        if not keyboard_widget.docked:
-            cls.keyboard_position_simple(
-                browser, keyboard_widget, rect, attributes)
-            if Window.width < keyboard_widget.x + keyboard_widget.width:
-                keyboard_widget.x = Window.width - keyboard_widget.width
-            if keyboard_widget.x < 0:
-                keyboard_widget.x = 0
-            if Window.height < keyboard_widget.y + keyboard_widget.height:
-                keyboard_widget.y = Window.height - keyboard_widget.height
-            if keyboard_widget.y < 0:
-                keyboard_widget.y = 0
+        if keyboard_widget.docked:
+            return
+        cls.keyboard_position_simple(
+            browser, keyboard_widget, rect, attributes)
+        if Window.width < keyboard_widget.x + keyboard_widget.width:
+            keyboard_widget.x = Window.width - keyboard_widget.width
+        keyboard_widget.x = max(keyboard_widget.x, 0)
+        if Window.height < keyboard_widget.y + keyboard_widget.height:
+            keyboard_widget.y = Window.height - keyboard_widget.height
+        keyboard_widget.y = max(keyboard_widget.y, 0)
 
     @classmethod
     def always_allow_popups(cls, browser, url):
@@ -533,7 +530,6 @@ class CEFBrowser(Widget, FocusBehavior):
 
         if len(self._touches) == 1:
             if not touch.is_scrolling or touch.is_right_click:
-                # Dragging: Differ between HTML5 drag and normal drag
                 if self.is_html5_drag:
                     if self.is_inside_window(touch.x, touch.y):
                         modifiers = cefpython.EVENTFLAG_LEFT_MOUSE_BUTTON
@@ -547,27 +543,28 @@ class CEFBrowser(Widget, FocusBehavior):
                         self.cef_drag_target_drag_over(
                             x, y, cefpython.DRAG_OPERATION_EVERY)
                         self.update_drag_representation(touch.x, touch.y)
+                    elif not self.is_html5_drag_leave:
+                        self.is_html5_drag_leave = True
+                        self.cef_drag_target_drag_leave()
+                elif abs(touch.dx) > 5 or abs(touch.dy) > 5:
+                    if touch.is_dragging:
+                        modifiers = cefpython.EVENTFLAG_LEFT_MOUSE_BUTTON
+                        self.cef_mouse_move(
+                            x, y, mouse_leave=False,
+                            modifiers=modifiers,
+                        )
                     else:
-                        if not self.is_html5_drag_leave:
-                            self.is_html5_drag_leave = True
-                            self.cef_drag_target_drag_leave()
-                else:
-                    if (
-                        (abs(touch.dx) > 5 or abs(touch.dy) > 5) or
-                        touch.is_dragging
-                    ):
-                        if touch.is_dragging:
-                            modifiers = cefpython.EVENTFLAG_LEFT_MOUSE_BUTTON
-                            self.cef_mouse_move(
-                                x, y, mouse_leave=False,
-                                modifiers=modifiers,
-                            )
-                        else:
-                            self.cef_mouse_click(
-                                x_start, y_start, cefpython.MOUSEBUTTON_LEFT,
-                                mouse_up=False, click_count=1,
-                            )
-                            touch.is_dragging = True
+                        self.cef_mouse_click(
+                            x_start, y_start, cefpython.MOUSEBUTTON_LEFT,
+                            mouse_up=False, click_count=1,
+                        )
+                        touch.is_dragging = True
+                elif touch.is_dragging:
+                    modifiers = cefpython.EVENTFLAG_LEFT_MOUSE_BUTTON
+                    self.cef_mouse_move(
+                        x, y, mouse_leave=False,
+                        modifiers=modifiers,
+                    )
         elif len(self._touches) == 2:
             # Scroll only if a minimal distance passed (could be right click)
             touch1, touch2 = self._touches[:2]
@@ -616,50 +613,43 @@ class CEFBrowser(Widget, FocusBehavior):
                     y = self.height
                 self.cef_drag_source_ended_at(x, y,
                                               self.current_drag_operation)
-                self.drag_ended()
             else:
                 self.cef_drag_target_drop(touch.x, y)
                 self.cef_drag_source_ended_at(touch.x, y,
                                               self.current_drag_operation)
-                self.drag_ended()
-
-        else:
-            if len(self._touches) == 2:
-                if not touch.is_scrolling:
-                    # Right click (mouse down, mouse up)
-                    self._touches[0].is_right_click = True
-                    self._touches[1].is_right_click = True
-                    self.cef_mouse_click(
-                        x, y, cefpython.MOUSEBUTTON_RIGHT,
-                        mouse_up=False, click_count=1,
-                    )
-                    self.cef_mouse_click(
-                        x, y, cefpython.MOUSEBUTTON_RIGHT,
-                        mouse_up=True, click_count=1,
-                    )
-            else:
-                if touch.is_dragging:
-                    # Drag end (mouse up)
-                    self.cef_mouse_click(
-                        touch.ppos[0], self.height-touch.ppos[1] + self.pos[1],
-                        cefpython.MOUSEBUTTON_LEFT,
-                        mouse_up=True, click_count=1,
-                    )
-                elif not touch.is_right_click and not touch.is_scrolling:
-                    # Left click (mouse down, mouse up)
-                    count = 1
-                    if touch.is_double_tap:
-                        count = 2
-                    self.cef_mouse_click(
-                        x, y,
-                        cefpython.MOUSEBUTTON_LEFT,
-                        mouse_up=False, click_count=count,
-                    )
-                    self.cef_mouse_click(
-                        x, y,
-                        cefpython.MOUSEBUTTON_LEFT,
-                        mouse_up=True, click_count=count,
-                    )
+            self.drag_ended()
+        elif len(self._touches) == 2:
+            if not touch.is_scrolling:
+                # Right click (mouse down, mouse up)
+                self._touches[0].is_right_click = True
+                self._touches[1].is_right_click = True
+                self.cef_mouse_click(
+                    x, y, cefpython.MOUSEBUTTON_RIGHT,
+                    mouse_up=False, click_count=1,
+                )
+                self.cef_mouse_click(
+                    x, y, cefpython.MOUSEBUTTON_RIGHT,
+                    mouse_up=True, click_count=1,
+                )
+        elif touch.is_dragging:
+            # Drag end (mouse up)
+            self.cef_mouse_click(
+                touch.ppos[0], self.height-touch.ppos[1] + self.pos[1],
+                cefpython.MOUSEBUTTON_LEFT,
+                mouse_up=True, click_count=1,
+            )
+        elif not touch.is_right_click and not touch.is_scrolling:
+            count = 2 if touch.is_double_tap else 1
+            self.cef_mouse_click(
+                x, y,
+                cefpython.MOUSEBUTTON_LEFT,
+                mouse_up=False, click_count=count,
+            )
+            self.cef_mouse_click(
+                x, y,
+                cefpython.MOUSEBUTTON_LEFT,
+                mouse_up=True, click_count=count,
+            )
 
         self._touches.remove(touch)
         touch.ungrab(self)
@@ -711,9 +701,7 @@ class CEFBrowser(Widget, FocusBehavior):
     def is_inside_window(self, x, y):
         # When mouse is out of app window Kivy still generates move events
         # at the borders with x=0, x=width-1, y=0, y=height-1.
-        if (0 < x < Window.width-1) and (0 < y < Window.height-1):
-            return True
-        return False
+        return 0 < x < Window.width-1 and 0 < y < Window.height-1
 
     def update_drag_representation(self, x, y):
         """ Displays the representation of the drag under the touch.
@@ -770,7 +758,7 @@ class CEFBrowserPopup(Widget):
     def _realign(self, *largs):
         self.x = self.rx + self.browser_widget.x
         self.y = self.browser_widget.height - self.ry - self.height + \
-            self.browser_widget.y
+                self.browser_widget.y
         ts = self._texture.size
         ss = self.size
         schg = (ts[0] != ss[0] or ts[1] != ss[1])
@@ -798,7 +786,7 @@ class CEFBrowserJSFunctionProxy:
         self.key = key
 
     def __call__(self, *largs):
-        js_code = str(self.key)+"("
+        js_code = f"{str(self.key)}("
         first = True
         for arg in largs:
             if not first:
@@ -940,8 +928,6 @@ class ClientHandler:
     def OnAddressChange(self, browser, frame, url):  # noqa: N802
         if browser.GetMainFrame() == frame:
             self.browser_widgets[browser].url = url
-        else:
-            pass
             # print("TODO: Address changed in Frame")
 
     def OnTitleChange(self, browser, title):  # noqa: N802
@@ -1118,31 +1104,32 @@ class ClientHandler:
         #     browser.GetWindowHandle(),
         #     browser.GetOpenerWindowHandle(),
         # )
-        if browser.IsPopup():
-            wh = browser.GetWindowHandle()
-            cb = CEFBrowser(browser=browser)
-            bw = False
-            if wh in client_handler.pending_popups:
-                parent_browser = client_handler.pending_popups[wh]
-                if parent_browser in client_handler.browser_widgets:
-                    bw = client_handler.browser_widgets[parent_browser]
-            if not bw:
-                bw = client_handler.browser_widgets[
-                    client_handler.browser_widgets.iterkeys().next()]
-            if hasattr(bw.popup_handler, "__call__"):
-                try:
-                    bw.popup_handler(bw, cb)
-                except Exception as err:
-                    Logger.warning(
-                        "CEFBrowser: Popup handler failed with error: %s", err)
-            else:
-                Logger.info("CEFBrowser: No Popup handler detected.")
-            if not cb.parent:
+        if not browser.IsPopup():
+            return
+        wh = browser.GetWindowHandle()
+        cb = CEFBrowser(browser=browser)
+        bw = False
+        if wh in client_handler.pending_popups:
+            parent_browser = client_handler.pending_popups[wh]
+            if parent_browser in client_handler.browser_widgets:
+                bw = client_handler.browser_widgets[parent_browser]
+        if not bw:
+            bw = client_handler.browser_widgets[
+                client_handler.browser_widgets.iterkeys().next()]
+        if hasattr(bw.popup_handler, "__call__"):
+            try:
+                bw.popup_handler(bw, cb)
+            except Exception as err:
                 Logger.warning(
-                    "CEFBrowser: Popup handler did not add the " +
-                    "popup_browser to the widget tree. Adding it to Window.",
-                )
-                Window.add_widget(cb)
+                    "CEFBrowser: Popup handler failed with error: %s", err)
+        else:
+            Logger.info("CEFBrowser: No Popup handler detected.")
+        if not cb.parent:
+            Logger.warning(
+                "CEFBrowser: Popup handler did not add the " +
+                "popup_browser to the widget tree. Adding it to Window.",
+            )
+            Window.add_widget(cb)
 
     """
     def RunModal(self, browser, *largs):  # noqa: N802
@@ -1448,9 +1435,9 @@ document.addEventListener("selectionchange", function (e) {
             if not hasattr(self, 'lastPaints'):
                 self.lastPaints = []
             self.lastPaints.append(time.time())
-            while 10 < len(self.lastPaints):
+            while len(self.lastPaints) > 10:
                 self.lastPaints.pop(0)
-            if 1 < len(self.lastPaints):
+            if len(self.lastPaints) > 1:
                 Logger.debug(
                     "CEFBrowser: FPS: %f",
                     len(self.lastPaints) /
@@ -1587,8 +1574,7 @@ document.addEventListener("selectionchange", function (e) {
         pass
 
     def GetCookieManager(self, browser, main_url):  # noqa: N802
-        cookie_manager = cefpython.CookieManager.GetGlobalManager()
-        if cookie_manager:
+        if cookie_manager := cefpython.CookieManager.GetGlobalManager():
             return cookie_manager
         else:
             Logger.warning("No cookie manager found!")
@@ -1618,13 +1604,12 @@ document.addEventListener("selectionchange", function (e) {
         request_url,
         callback,
     ):
-        Logger.warning("OnCertificateError %s %s %s" %
-                       (cert_error, request_url, callback))
+        Logger.warning(f"OnCertificateError {cert_error} {request_url} {callback}")
         if CEFBrowser.certificate_error_handler:
             try:
-                res = CEFBrowser.certificate_error_handler(
-                    CEFBrowser(), cert_error, request_url)
-                if res:
+                if res := CEFBrowser.certificate_error_handler(
+                    CEFBrowser(), cert_error, request_url
+                ):
                     callback.Continue(True)
                     return
             except Exception as err:

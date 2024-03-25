@@ -3,7 +3,7 @@ import skimage.measure
 
 class SpriteIdentifier:
     def __init__(self):
-        self.sprites = dict()
+        self.sprites = {}
 
     def identify(self, sprite, mode="SIGNATURE_COLORS", score_threshold=75, debug=False):
         if mode == "SIGNATURE_COLORS":
@@ -43,11 +43,16 @@ class SpriteIdentifier:
                 for i in range(query_sprite.image_data.shape[3]):
                     query_sprite_image = query_sprite.image_data[..., i]
 
-                    constellation_of_pixels_score = 0
+                    constellation_of_pixels_score = sum(
+                        tuple(
+                            query_sprite_image[
+                                pixel_coordinates[0], pixel_coordinates[1], :
+                            ][:3]
+                        )
+                        == pixel_color
+                        for pixel_coordinates, pixel_color in constellation_of_pixels.items()
+                    )
 
-                    for pixel_coordinates, pixel_color in constellation_of_pixels.items():
-                        if tuple(query_sprite_image[pixel_coordinates[0], pixel_coordinates[1], :][:3]) == pixel_color:
-                            constellation_of_pixels_score += 1
 
                     constellation_of_pixels_score = int((constellation_of_pixels_score / len(constellation_of_pixels)) * 100)
 
@@ -79,9 +84,8 @@ class SpriteIdentifier:
                         if ssim_score > top_sprite_score:
                             top_sprite_score = ssim_score
                             top_sprite_match = sprite_name
-            else:
-                if debug:
-                    print(f"The shape of '{sprite_name}' does not match the query sprite's shape. Skipping!")
+            elif debug:
+                print(f"The shape of '{sprite_name}' does not match the query sprite's shape. Skipping!")
 
         return top_sprite_match if top_sprite_score >= score_threshold else "UNKNOWN"
 

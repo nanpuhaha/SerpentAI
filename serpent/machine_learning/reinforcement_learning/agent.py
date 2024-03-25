@@ -40,7 +40,7 @@ class Agent:
         self.game_inputs = game_inputs
         self.game_inputs_mappings = self._generate_game_inputs_mappings()
 
-        self.callbacks = callbacks or dict()
+        self.callbacks = callbacks or {}
 
         self.current_state = None
 
@@ -102,17 +102,14 @@ class Agent:
                     time.sleep(0.01)
 
     def _generate_game_inputs_mappings(self):
-        mappings = list()
+        mappings = []
 
         for game_inputs_item in self.game_inputs:
             if game_inputs_item["control_type"] == InputControlTypes.CONTINUOUS:
                 mappings.append(None)
                 continue
 
-            mapping = dict()
-
-            for index, key in enumerate(game_inputs_item["inputs"]):
-                mapping[index] = key
+            mapping = dict(enumerate(game_inputs_item["inputs"]))
 
             mappings.append(mapping)
 

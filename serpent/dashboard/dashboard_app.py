@@ -109,7 +109,7 @@ class DashboardApp(App):
         if self.dashboard_api_process is not None:
             self.stop_dashboard_api()
 
-        dashboard_api_command = f"python dashboard/dashboard_api_component.py"
+        dashboard_api_command = "python dashboard/dashboard_api_component.py"
 
         self.dashboard_api_process = subprocess.Popen(shlex.split(dashboard_api_command))
 
@@ -130,26 +130,29 @@ class DashboardApp(App):
     def _determine_fullscreen_resolution(self):
         if is_windows():
             return [win32api.GetSystemMetrics(0), win32api.GetSystemMetrics(1)]
-        else:
-            monitors = mss.mss().monitors
-            return monitors[0]["width"], monitors[0]["height"]
+        monitors = mss.mss().monitors
+        return monitors[0]["width"], monitors[0]["height"]
 
 
     def _handle_signal_analytics_publisher(self, signum=15, frame=None, do_exit=True):
-        if self.analytics_publisher_process is not None:
-            if self.analytics_publisher_process.poll() is None:
-                self.analytics_publisher_process.send_signal(signum)
+        if (
+            self.analytics_publisher_process is not None
+            and self.analytics_publisher_process.poll() is None
+        ):
+            self.analytics_publisher_process.send_signal(signum)
 
-                if do_exit:
-                    exit()
+            if do_exit:
+                exit()
 
     def _handle_signal_dashboard_api(self, signum=15, frame=None, do_exit=True):
-        if self.dashboard_api_process is not None:
-            if self.dashboard_api_process.poll() is None:
-                self.dashboard_api_process.send_signal(signum)
+        if (
+            self.dashboard_api_process is not None
+            and self.dashboard_api_process.poll() is None
+        ):
+            self.dashboard_api_process.send_signal(signum)
 
-                if do_exit:
-                    exit()
+            if do_exit:
+                exit()
                     
 
 class DashboardRootWidget(Widget):

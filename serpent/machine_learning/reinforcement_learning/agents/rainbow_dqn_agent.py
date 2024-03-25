@@ -165,10 +165,15 @@ class RainbowDQNAgent(Agent):
             self.add_human_observations_to_replay_memory()
 
     def generate_actions(self, state, **kwargs):
-        frames = list()
+        frames = [
+            torch.tensor(
+                torch.from_numpy(game_frame.frame),
+                dtype=torch.float32,
+                device=self.device,
+            )
+            for game_frame in state.frames
+        ]
 
-        for game_frame in state.frames:
-            frames.append(torch.tensor(torch.from_numpy(game_frame.frame), dtype=torch.float32, device=self.device))
 
         self.current_state = torch.stack(frames, 0)
 
@@ -182,7 +187,7 @@ class RainbowDQNAgent(Agent):
         The second session is gonna get through the second if statement
         The 3rd statement probably is in case one explictly defines self.mode = TRAIN. But, since it's equivalent to
         OBSERVE with observe_mode = Model, I can't see that much motives to do so'''
-        
+
         if self.mode == RainbowDQNAgentModes.OBSERVE and self.observe_mode == "RANDOM":
             self.current_action = random.randint(0, len(self.game_inputs[0]["inputs"]) - 1)
         elif self.mode == RainbowDQNAgentModes.OBSERVE and self.observe_mode == "MODEL":
@@ -192,14 +197,11 @@ class RainbowDQNAgent(Agent):
             self.agent.reset_noise()
             self.current_action = self.agent.act(self.current_state)
 
-        actions = list()
-
         label = self.game_inputs_mappings[0][self.current_action] # current_action is a number, simply a number
         action = self.game_inputs[0]["inputs"][label]
         value = self.game_inputs[0]["value"]
 
-        actions.append((label, action, value))
-
+        actions = [(label, action, value)]
         for action in actions:
             self.analytics_client.track(
                 event_key="AGENT_ACTION",
@@ -219,10 +221,15 @@ class RainbowDQNAgent(Agent):
         to return a MouseEvent.MOVE command.
         '''
 
-        frames = []
+        frames = [
+            torch.tensor(
+                torch.from_numpy(game_frame.frame),
+                dtype=torch.float32,
+                device=self.device,
+            )
+            for game_frame in state.frames
+        ]
 
-        for game_frame in state.frames:
-            frames.append(torch.tensor(torch.from_numpy(game_frame.frame), dtype=torch.float32, device=self.device))
 
         self.current_state = torch.stack(frames, 0)
 
@@ -236,7 +243,7 @@ class RainbowDQNAgent(Agent):
         The second session is gonna get through the second if statement
         The 3rd statement probably is in case one explictly defines self.mode = TRAIN. But, since it's equivalent to
         OBSERVE with observe_mode = Model, I can't see that much motives to do so'''
-        
+
         if self.mode == RainbowDQNAgentModes.OBSERVE and self.observe_mode == "RANDOM":
             self.current_action = random.randint(0, len(self.game_inputs[0]["inputs"]) - 1)
         elif self.mode == RainbowDQNAgentModes.OBSERVE and self.observe_mode == "MODEL":
@@ -247,9 +254,7 @@ class RainbowDQNAgent(Agent):
             self.current_action = self.agent.act(self.current_state)
 
         label = self.game_inputs_mappings[0][self.current_action]
-        number = self.game_inputs[0]["inputs"][label]
-
-        return number
+        return self.game_inputs[0]["inputs"][label]
 
     def generate_mouse_actions(self, X, width, Y, height, **kwargs):
         '''
@@ -266,16 +271,12 @@ class RainbowDQNAgent(Agent):
         if Y > height:
             Y = Y*height/width
             Y = round(Y)
-        
-        mouse_actions = []
 
-        label = str(X) + "," + str(Y)
+        label = f"{str(X)},{str(Y)}"
         action = [MouseEvent(MouseEvents.MOVE, x=X, y=Y)]
         value = self.game_inputs[0]["value"]
-                
-        mouse_actions.append((label, action, value))
 
-        return mouse_actions
+        return [(label, action, value)]
 
     def observe(self, reward=0, terminal=False, **kwargs):
         if self.current_state is None:
@@ -345,16 +346,16 @@ class RainbowDQNAgent(Agent):
 
     def add_human_observations_to_replay_memory(self):
         keyboard_key_value_label_mapping = self._generate_keyboard_key_value_mapping()
-        input_label_action_space_mapping = dict()
+        input_label_action_space_mapping = {
+            label_action_space_value[1]: label_action_space_value[0]
+            for label_action_space_value in list(
+                enumerate(self.game_inputs[0]["inputs"])
+            )
+        }
 
-        for label_action_space_value in list(enumerate(self.game_inputs[0]["inputs"])):
-            input_label_action_space_mapping[label_action_space_value[1]] = label_action_space_value[0]
 
         with h5py.File(f"datasets/{self.name}_input_recording.h5", "r") as f:
-            timestamps = set()
-
-            for key in f.keys():
-                timestamps.add(float(key.split("-")[0]))
+            timestamps = {float(key.split("-")[0]) for key in f.keys()}
 
             for timestamp in sorted(list(timestamps)):
                 # Frames
@@ -414,22 +415,19 @@ class RainbowDQNAgent(Agent):
         return os.path.isfile(f"datasets/{self.name}_input_recording.h5")
 
     def _generate_keyboard_key_value_mapping(self):
-        mapping = dict()
+        mapping = {}
 
         for label, input_events in self.game_inputs[0]["inputs"].items():
-            keyboard_keys = list()
-            mouse_keys = list()
+            keyboard_keys = []
+            mouse_keys = []
 
             for input_event in input_events:
                 if isinstance(input_event, KeyboardEvent):
                     keyboard_keys.append(input_event.keyboard_key.value)
                 elif isinstance(input_event, MouseEvent):
                     mouse_keys.append(input_event.button.value)
-            
-            total_keys = []
-            total_keys.append(keyboard_keys)
-            total_keys.append(mouse_keys)
 
+            total_keys = [keyboard_keys, mouse_keys]
             mapping[tuple(sorted(total_keys))] = label
 
         return mapping

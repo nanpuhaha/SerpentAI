@@ -271,49 +271,52 @@ class NativeWin32InputController(InputController):
 
     # Mouse Actions
     def move(self, x=None, y=None, duration=0.25, absolute=True, interpolate=True, **kwargs):
-        if ("force" in kwargs and kwargs["force"] is True) or self.game_is_focused:
-            if absolute:
-                x += self.game.window_geometry["x_offset"]
-                y += self.game.window_geometry["y_offset"]
+        if (
+            "force" not in kwargs or kwargs["force"] is not True
+        ) and not self.game_is_focused:
+            return
+        if absolute:
+            x += self.game.window_geometry["x_offset"]
+            y += self.game.window_geometry["y_offset"]
 
-                current_pixel_coordinates = win32api.GetCursorPos()
-                start_coordinates = self._to_windows_coordinates(*current_pixel_coordinates)
+            current_pixel_coordinates = win32api.GetCursorPos()
+            start_coordinates = self._to_windows_coordinates(*current_pixel_coordinates)
 
-                end_coordinates = self._to_windows_coordinates(x, y)
+            end_coordinates = self._to_windows_coordinates(x, y)
 
-                if interpolate:
-                    coordinates = self._interpolate_mouse_movement(
-                        start_windows_coordinates=start_coordinates,
-                        end_windows_coordinates=end_coordinates
-                    )
-                else:
-                    coordinates = [end_coordinates]
-
-                for x, y in coordinates:
-                    extra = ctypes.c_ulong(0)
-                    ii_ = Input_I()
-                    ii_.mi = MouseInput(x, y, 0, (0x0001 | 0x8000), 0, ctypes.pointer(extra))
-                    x = Input(ctypes.c_ulong(0), ii_)
-                    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
-
-                    time.sleep(duration / len(coordinates))
-            else:
-                x = int(x)
-                y = int(y)
-
+            if interpolate:
                 coordinates = self._interpolate_mouse_movement(
-                    start_windows_coordinates=(0, 0),
-                    end_windows_coordinates=(x, y)
+                    start_windows_coordinates=start_coordinates,
+                    end_windows_coordinates=end_coordinates
                 )
+            else:
+                coordinates = [end_coordinates]
 
-                for x, y in coordinates:
-                    extra = ctypes.c_ulong(0)
-                    ii_ = Input_I()
-                    ii_.mi = MouseInput(x, y, 0, 0x0001, 0, ctypes.pointer(extra))
-                    x = Input(ctypes.c_ulong(0), ii_)
-                    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
+            for x, y in coordinates:
+                extra = ctypes.c_ulong(0)
+                ii_ = Input_I()
+                ii_.mi = MouseInput(x, y, 0, (0x0001 | 0x8000), 0, ctypes.pointer(extra))
+                x = Input(ctypes.c_ulong(0), ii_)
+                ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
-                    time.sleep(duration / len(coordinates))
+                time.sleep(duration / len(coordinates))
+        else:
+            x = int(x)
+            y = int(y)
+
+            coordinates = self._interpolate_mouse_movement(
+                start_windows_coordinates=(0, 0),
+                end_windows_coordinates=(x, y)
+            )
+
+            for x, y in coordinates:
+                extra = ctypes.c_ulong(0)
+                ii_ = Input_I()
+                ii_.mi = MouseInput(x, y, 0, 0x0001, 0, ctypes.pointer(extra))
+                x = Input(ctypes.c_ulong(0), ii_)
+                ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
+
+                time.sleep(duration / len(coordinates))
 
     def click_down(self, button=MouseButton.LEFT, **kwargs):
         if ("force" in kwargs and kwargs["force"] is True) or self.game_is_focused:
@@ -443,6 +446,9 @@ class NativeWin32InputController(InputController):
         interpolation_func = scipy.interpolate.interp1d(x_coordinates, y_coordinates)
 
         intermediate_x_coordinates = np.linspace(start_windows_coordinates[0], end_windows_coordinates[0], steps + 1)[1:]
-        coordinates = list(map(lambda x: (int(round(x)), int(interpolation_func(x))), intermediate_x_coordinates))
-
-        return coordinates
+        return list(
+            map(
+                lambda x: (int(round(x)), int(interpolation_func(x))),
+                intermediate_x_coordinates,
+            )
+        )

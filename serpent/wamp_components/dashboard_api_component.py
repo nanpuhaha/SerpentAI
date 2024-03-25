@@ -17,7 +17,7 @@ class DashboardAPIComponent:
     def run(cls):
         print(f"Starting {cls.__name__}...")
 
-        url = "ws://%s:%s" % (config["crossbar"]["host"], config["crossbar"]["port"])
+        url = f'ws://{config["crossbar"]["host"]}:{config["crossbar"]["port"]}'
 
         runner = ApplicationRunner(url=url, realm=config["crossbar"]["realm"])
         runner.run(DashboardAPIWAMPComponent)

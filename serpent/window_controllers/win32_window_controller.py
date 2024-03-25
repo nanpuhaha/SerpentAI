@@ -55,13 +55,9 @@ class Win32WindowController(WindowController):
         return win32gui.GetWindowText(win32gui.GetForegroundWindow())
 
     def get_window_geometry(self, window_id):
-        geometry = dict()
-
         x, y, width, height = win32gui.GetClientRect(window_id)
 
-        geometry["width"] = width
-        geometry["height"] = height
-
+        geometry = {"width": width, "height": height}
         x0, y0, x1, y1 = win32gui.GetWindowRect(window_id)
 
         border_width = ((x1 - x0 - width) // 2)
